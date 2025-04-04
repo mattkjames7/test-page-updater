@@ -1,10 +1,10 @@
-name: Update External README
+name: Trigger Update README Workflow
 
 on:
   workflow_dispatch:
     inputs:
       table:
-        type: 'choice'
+        type: choice
         description: 'Name of the table being updated'
         required: true
         default: 'memgraph'
@@ -16,57 +16,34 @@ on:
         description: 'Maximum number of daily builds to keep'
         required: true
         default: 42
-      build_data:
+      data:
         type: string
         description: 'JSON string with data for updating the README'
         required: true
         default: '{}'
 
 jobs:
-  update-readme:
+  trigger-workflow:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-
-      - name: Checkout target repository
-        uses: actions/checkout@v3
-        with:
-          repository: mattkjames7/test-page
-          token: ${{ secrets.TEST_PAGE_PAT }}
-          path: target-repo
-
-      - name: Run update_readme.py script
+      - name: Trigger target workflow via API
+        env:
+          # Use a token with repo dispatch permission
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          TABLE: ${{ github.event.inputs.table }}
+          LIMIT: ${{ github.event.inputs.limit }}
+          DATA: ${{ github.event.inputs.data }}
         run: |
-          # Set the JSON string to an environment variable
-          export BUILD_DATA='${{ github.event.inputs.build_data }}'
-          # Running the script from the main repository (adjust the path if needed)
-          python3 update_readme.py "${{ github.event.inputs.table }}" "${{ github.event.inputs.limit }}" "$BUILD_DATA"
-
-      - name: Update README in target repository
-        run: |
-          cd target-repo
-          # Example update logic
-          echo "\nUpdated on $(date)" >> README.md
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add README.md
-          git commit -m "Update README via workflow"
-          git push
-
-      - name: Update README.md
-        run: |
-         # Set the JSON string to an environment variable
-          export BUILD_DATA='${{ github.event.inputs.build_data }}'
-          python3 update_readme.py "${{ github.event.inputs.table }}" "${{ github.event.inputs.limit }}" "$BUILD_DATA"
-          cd target-repo
-          # Example: Append a timestamp to README.md (replace with your actual update logic)
-          echo "\nUpdated on $(date)" >> README.md
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add README.md
-          git commit -m "Update README via workflow"
-          git push
-
+          echo "Triggering workflow on target repository..."
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/mattkjames7/test-page/dispatches \
+            -d '{
+                  "event_type": "trigger_update_readme",
+                  "client_payload": {
+                    "table": "'"$TABLE"'",
+                    "limit": "'"$LIMIT"'",
+                    "build_data": "'"$DATA"'"
+                  }
+                }'

@@ -258,9 +258,11 @@ def updateTable(table,limit,data):
     Updates a specific table in the daily release page with the latest release links
     
     """
-
+    limit = int(limit)
+    print(limit)
     # read json data
     data = json.loads(data)
+    print(data)
 
     # this is the file to update
     fname = "target-repo/README.md"
@@ -301,7 +303,7 @@ def main():
     print("Table:", args.table)
     print("Limit:", args.limit)
     print("Data:", args.data)
-    
+
     updateTable(args.table,args.limit,args.data)
 
 if __name__ == "__main__":
