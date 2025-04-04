@@ -26,6 +26,11 @@ jobs:
   update-readme:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout main repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
       - name: Checkout target repository
         uses: actions/checkout@v3
         with:
@@ -33,9 +38,29 @@ jobs:
           token: ${{ secrets.TEST_PAGE_PAT }}
           path: target-repo
 
+      - name: Run update_readme.py script
+        run: |
+          # Set the JSON string to an environment variable
+          export BUILD_DATA='${{ github.event.inputs.build_data }}'
+          # Running the script from the main repository (adjust the path if needed)
+          python3 update_readme.py "${{ github.event.inputs.table }}" "${{ github.event.inputs.limit }}" "$BUILD_DATA"
+
+      - name: Update README in target repository
+        run: |
+          cd target-repo
+          # Example update logic
+          echo "\nUpdated on $(date)" >> README.md
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add README.md
+          git commit -m "Update README via workflow"
+          git push
+
       - name: Update README.md
         run: |
-          python3 update_readme.py "${{ inputs.table }}" "${{ inputs.limit }}" "${{ inputs.build_data }}"
+         # Set the JSON string to an environment variable
+          export BUILD_DATA='${{ github.event.inputs.build_data }}'
+          python3 update_readme.py "${{ github.event.inputs.table }}" "${{ github.event.inputs.limit }}" "$BUILD_DATA"
           cd target-repo
           # Example: Append a timestamp to README.md (replace with your actual update logic)
           echo "\nUpdated on $(date)" >> README.md
