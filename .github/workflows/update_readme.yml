@@ -34,16 +34,23 @@ jobs:
           LIMIT: ${{ github.event.inputs.limit }}
           DATA: ${{ github.event.inputs.data }}
         run: |
-          echo "Triggering workflow on target repository..."
+          # Build the JSON payload using jq
+          payload=$(jq -n \
+            --arg table "$TABLE" \
+            --arg limit "$LIMIT" \
+            --arg build_data "$DATA" \
+            '{
+                event_type: "trigger_update_readme",
+                client_payload: {
+                  table: $table,
+                  limit: $limit,
+                  build_data: $build_data
+                }
+              }')
+          echo "Payload: $payload"
+          # Send the dispatch request
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
             -H "Authorization: token $GITHUB_TOKEN" \
             https://api.github.com/repos/mattkjames7/test-page/dispatches \
-            -d '{
-                  "event_type": "trigger_update_readme",
-                  "client_payload": {
-                    "table": "'"$TABLE"'",
-                    "limit": "'"$LIMIT"'",
-                    "build_data": "'"$DATA"'"
-                  }
-                }'
+            -d "$payload"
